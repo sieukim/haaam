@@ -1,5 +1,5 @@
 name: haaam
-description: 그룹 알람 애플리케이션
+description: A new Flutter project.
 
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
@@ -28,6 +28,8 @@ environment:
 # versions available, run `flutter pub outdated`.
 dependencies:
   flutter:
+    sdk: flutter
+  flutter_localizations:
     sdk: flutter
 
 
