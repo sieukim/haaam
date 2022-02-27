@@ -21,6 +21,9 @@ class _MainPageState extends State<MainPage> {
   // 로컬 저장소에 저장된 알람 목록
   List<String> _alarmListLocal = [];
 
+  // 로컬 저장소에 저장된 알람 제목 목록
+  late List<String> _alarmTitleLocal;
+
   bool _editable = false;
 
   // 로컬 저장소에 저장된 알람 목록 가져오기
@@ -28,10 +31,12 @@ class _MainPageState extends State<MainPage> {
     SharedPreferences _prefs = await SharedPreferences.getInstance();
 
     _alarmListLocal = _prefs.getStringList('alarmList') ?? [];
+    _alarmTitleLocal = _prefs.getStringList('alarmTitleList') ?? [];
 
     setState(() {
       for (var i = 0; i < _alarmListLocal.length; i++) {
-        _alarmListState.add(jsonDecode(_alarmListLocal[i]));
+        var _alarm = jsonDecode(_alarmListLocal[i]);
+        _alarmListState.add(_alarm);
       }
     });
   }
@@ -55,13 +60,21 @@ class _MainPageState extends State<MainPage> {
 
   // 알람 삭제 버튼 onPressed 핸들러
   _onPressedDelete(index) async {
+    SharedPreferences _prefs = await SharedPreferences.getInstance();
+
     setState(() {
+      // 상태로 저장된 알람 목록
       _alarmListState.remove(_alarmListState[index]);
+
+      // 로컬 저장소에 저장된 알람 목록
       _alarmListLocal.remove(_alarmListLocal[index]);
+
+      // 로컬 저장소에 저장된 제목 목록
+      _alarmTitleLocal.remove(_alarmTitleLocal[index]);
     });
 
-    SharedPreferences _prefs = await SharedPreferences.getInstance();
     _prefs.setStringList('alarmList', _alarmListLocal);
+    _prefs.setStringList('alarmTitleList', _alarmTitleLocal);
   }
 
   @override
