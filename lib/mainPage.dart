@@ -163,12 +163,24 @@ class _MainPageState extends State<MainPage> {
                             ],
                           ),
                         ),
-                        onTap: () {
-                          Navigator.of(context).push(
+                        onTap: () async {
+                          final _result = await Navigator.of(context).push(
                             CupertinoPageRoute(
                               builder: (context) => EditPage(alarm: _alarm),
                             ),
                           );
+                          setState(() {
+                            if (_result['type'] == 'delete' &&
+                                _result['alarm'] != null) {
+                              _alarmListState.remove(_result['alarm']);
+                            }
+
+                            if (_result['type'] == 'edit' &&
+                                _result['alarm'] != null) {
+                              _alarmListState.remove(_alarm);
+                              _alarmListState.add(jsonDecode(_result['alarm']));
+                            }
+                          });
                         },
                       )
                     : const Text('알람을 추가해주세요');
