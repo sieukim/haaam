@@ -1,7 +1,8 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:haaam/alarm.dart';
+import 'package:haaam/localData.dart';
 import 'package:intl/intl.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 class AddPage extends StatefulWidget {
   const AddPage({Key? key}) : super(key: key);
@@ -11,20 +12,14 @@ class AddPage extends StatefulWidget {
 }
 
 class _AddPageState extends State<AddPage> {
+  // 로컬 저장소 객체
+  late LocalData _localData;
+
   // 알람 제목 CupertinoTextField controller
   late TextEditingController _textEditingController;
 
-  // 알람 제목
-  late String _alarmTitle;
-
-  // 로컬 저장소에 저장된 알람 제목 목록
-  late List<String> _alarmTitleList;
-
-  // 로컬 저장소에 저장된 알람 목록
-  late List<String> _alarmList;
-
   // 알람 시간 리스트
-  final _timeList = <String>[];
+  final List<String> _timeList = [];
 
   // 현재 시간
   final _currentTime = DateTime.now();
@@ -32,11 +27,70 @@ class _AddPageState extends State<AddPage> {
   // CupertinoDatePicker가 나타내는 시간
   DateTime _pickedTime = DateTime.now();
 
+  // 중간 삽입 padding 객체를 반환하는 함수
+  _getPadding() {
+    return const Padding(
+      padding: EdgeInsets.symmetric(vertical: 5.0),
+    );
+  }
+
+  // 네비게이션 바 내 leading 버튼 객체를 반환하는 함수
+  _getLeadingButton() {
+    return CupertinoButton(
+      padding: const EdgeInsets.all(0),
+      onPressed: () {
+        Navigator.of(context).pop({'type': 'cancel', 'alarm': null});
+      },
+      child: const Text('취소'),
+    );
+  }
+
+  // 알람 저장 버튼 onPressed 핸들러
+  _onPressedSave() async {
+    // 알람 객체
+    Alarm alarm = Alarm(
+      _textEditingController.text,
+      _timeList.join(','),
+      true,
+    );
+    // 로컬 저장소에 저장
+    _localData.save(
+      alarm: alarm,
+      context: context,
+    );
+    // 저장된 알람 객체를 반환하며 네비게이션
+    Navigator.of(context).pop({'alarm': alarm, 'type': 'save'});
+  }
+
+  // 네비게이션 바 내 trailing 버튼 객체를 반환하는 함수
+  _getTrailingButton() {
+    return CupertinoButton(
+      padding: const EdgeInsets.all(0),
+      onPressed: _timeList.isNotEmpty ? _onPressedSave : null,
+      child: const Text('저장'),
+      disabledColor: CupertinoColors.systemFill,
+    );
+  }
+
   // CupertinoDatePicker onDateTimeChanged 핸들러
   _onDateTimeChanged(DateTime time) {
     setState(() {
       _pickedTime = time;
     });
+  }
+
+  // CupertinoDatePicker 객체를 반환하는 함수
+  _getTimePicker(Size _size) {
+    return SizedBox(
+      height: _size.height * 0.25,
+      width: _size.width * 0.8,
+      child: CupertinoDatePicker(
+        initialDateTime: _currentTime,
+        mode: CupertinoDatePickerMode.time,
+        use24hFormat: false,
+        onDateTimeChanged: _onDateTimeChanged,
+      ),
+    );
   }
 
   // 시간 추가 버튼 onPressed 핸들러
@@ -53,66 +107,65 @@ class _AddPageState extends State<AddPage> {
     });
   }
 
-  // 경고 문구 띄우기
-  _showCupertinoDialog(String message) {
-    // 경고 문구
-    showCupertinoDialog(
-      context: context,
-      builder: (context) {
-        return CupertinoAlertDialog(
-          title: Text(message),
-          actions: [
-            CupertinoDialogAction(
-              isDefaultAction: true,
-              child: const Text('확인'),
-              onPressed: () {
-                Navigator.pop(context);
-              },
-            ),
-          ],
-        );
-      },
+  // 시간 추가 버튼 객체를 반환하는 함수
+  _getAddButton() {
+    return CupertinoButton(
+      child: const Text('추가'),
+      onPressed: _onPressedAdd,
     );
   }
 
-  // 알람 저장 버튼 onPressed 핸들러
-  _onPressedSave() async {
-    SharedPreferences _prefs = await SharedPreferences.getInstance();
+  // 알람 제목을 입력 CupertinoTextField 객체를 반환하는 함수
+  _getTextField() {
+    return CupertinoTextField(
+      placeholder: '알람 이름',
+      controller: _textEditingController,
+      keyboardType: TextInputType.text,
+      padding: const EdgeInsets.all(9),
+    );
+  }
 
-    setState(() {
-      // 알람 제목
-      _alarmTitle = _textEditingController.text;
+  // 알람 timeList 리스트 뷰
+  _getListView() {
+    return ListView.separated(
+      scrollDirection: Axis.vertical,
+      shrinkWrap: true,
+      itemBuilder: (context, index) {
+        var time = _timeList[index];
 
-      // 로컬 저장소에 저장된 알람 목록
-      _alarmList = _prefs.getStringList('alarmList') ?? [];
-
-      // 로컬 저장소에 저장된 알람 제목 목록
-      _alarmTitleList = _prefs.getStringList('alarmTitleList') ?? [];
-    });
-
-    if (_alarmTitleList.length >= 10) {
-      _showCupertinoDialog('그룹 알람은 10개까지 생성 가능합니다.');
-    } else if (_alarmTitleList.contains(_alarmTitle)) {
-      _showCupertinoDialog('중복된 이름입니다.');
-    } else if (_alarmTitle.isEmpty) {
-      _showCupertinoDialog('알람 이름을 입력해주세요.');
-    } else {
-      var _alarm =
-          '{"title": "$_alarmTitle", "timeList": "$_timeList", "activated": "true"}';
-
-      // 로컬 저장소에 알람 목록에 현재 알람 추가
-      await _prefs.setStringList('alarmList', [..._alarmList, _alarm]);
-
-      // 로컬 저장소에 알람 제목 목록에 현재 알람 제목 추가
-      await _prefs
-          .setStringList('alarmTitleList', [..._alarmTitleList, _alarmTitle]);
-      Navigator.of(context).pop(_alarm);
-    }
+        return _timeList.isNotEmpty
+            ? Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(time),
+                  CupertinoButton(
+                    child: const Icon(CupertinoIcons.minus_circle),
+                    onPressed: () {
+                      setState(() {
+                        _timeList.remove(time);
+                      });
+                    },
+                  ),
+                ],
+              )
+            : const Text('시간을 추가해주세요');
+      },
+      itemCount: _timeList.length,
+      padding: const EdgeInsets.all(10),
+      separatorBuilder: (context, index) => const Divider(
+        color: CupertinoColors.systemFill,
+        thickness: 2,
+      ),
+    );
   }
 
   @override
   void initState() {
     super.initState();
+    // 로컬 저장소 객체 초기화
+    _localData = LocalData();
+    _localData.init();
+    // 알람 제목 controller
     _textEditingController = TextEditingController();
   }
 
@@ -123,90 +176,27 @@ class _AddPageState extends State<AddPage> {
 
     return CupertinoPageScaffold(
       navigationBar: CupertinoNavigationBar(
+        leading: _getLeadingButton(),
         middle: const Text('알람 추가'),
-        leading: CupertinoButton(
-          padding: const EdgeInsets.all(0),
-          onPressed: () {
-            Navigator.of(context).pop();
-          },
-          child: const Text('취소'),
-        ),
-        trailing: CupertinoButton(
-          padding: const EdgeInsets.all(0),
-          onPressed: _timeList.isNotEmpty ? _onPressedSave : null,
-          child: const Text('저장'),
-          disabledColor: CupertinoColors.systemFill,
-        ),
+        trailing: _getTrailingButton(),
       ),
       child: SafeArea(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.start,
           children: [
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 5.0),
-            ),
+            _getPadding(),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                SizedBox(
-                  height: _size.height * 0.25,
-                  width: _size.width * 0.8,
-                  child: CupertinoDatePicker(
-                    initialDateTime: _currentTime,
-                    mode: CupertinoDatePickerMode.time,
-                    use24hFormat: false,
-                    onDateTimeChanged: _onDateTimeChanged,
-                  ),
-                ),
-                CupertinoButton(
-                  child: const Text('추가'),
-                  onPressed: _onPressedAdd,
-                ),
+                _getTimePicker(_size),
+                _getAddButton(),
               ],
             ),
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 5.0),
-            ),
-            CupertinoTextField(
-              placeholder: '알람 이름',
-              controller: _textEditingController,
-              keyboardType: TextInputType.text,
-              padding: const EdgeInsets.all(9),
-            ),
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 5.0),
-            ),
+            _getPadding(),
+            _getTextField(),
+            _getPadding(),
             Expanded(
-              child: ListView.separated(
-                scrollDirection: Axis.vertical,
-                shrinkWrap: true,
-                itemBuilder: (context, index) {
-                  var time = _timeList[index];
-
-                  return _timeList.isNotEmpty
-                      ? Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(time),
-                            CupertinoButton(
-                              child: const Icon(CupertinoIcons.minus_circle),
-                              onPressed: () {
-                                setState(() {
-                                  _timeList.remove(time);
-                                });
-                              },
-                            ),
-                          ],
-                        )
-                      : const Text('시간을 추가해주세요');
-                },
-                itemCount: _timeList.length,
-                padding: const EdgeInsets.all(10),
-                separatorBuilder: (context, index) => const Divider(
-                  color: CupertinoColors.systemFill,
-                  thickness: 2,
-                ),
-              ),
+              child: _getListView(),
             ),
           ],
         ),

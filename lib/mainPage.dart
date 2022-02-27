@@ -1,9 +1,10 @@
-import 'dart:convert';
-
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:haaam/editPage.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:haaam/localData.dart';
+
+import 'addPage.dart';
+import 'alarm.dart';
 
 class MainPage extends StatefulWidget {
   final String? alarms;
@@ -15,72 +16,157 @@ class MainPage extends StatefulWidget {
 }
 
 class _MainPageState extends State<MainPage> {
-  // 상태로 저장된 알람 목록
-  final _alarmListState = <Map<String, dynamic>>[];
+  // 로컬 저장소 객체
+  late LocalData _localData;
 
-  // 로컬 저장소에 저장된 알람 목록
-  List<String> _alarmListLocal = [];
-
-  // 로컬 저장소에 저장된 알람 제목 목록
-  late List<String> _alarmTitleLocal;
-
+  // 편집 상태 여부
   bool _editable = false;
 
-  // 로컬 저장소에 저장된 알람 목록 가져오기
-  _loadAlarmList() async {
-    SharedPreferences _prefs = await SharedPreferences.getInstance();
+  // 네비게이션 바 내 leading 버튼 객체를 반환하는 함수
+  _getLeadingButton() {
+    return CupertinoButton(
+      padding: const EdgeInsets.all(0),
+      child: _editable ? const Text('완료') : const Text('편집'),
+      onPressed: () {
+        setState(() {
+          _editable = !_editable;
+        });
+      },
+    );
+  }
 
-    _alarmListLocal = _prefs.getStringList('alarmList') ?? [];
-    _alarmTitleLocal = _prefs.getStringList('alarmTitleList') ?? [];
+  // 네비게이션 바 내 leading 버튼 객체를 반환하는 함수
+  _getTrailingButton() {
+    return CupertinoButton(
+      padding: const EdgeInsets.all(0),
+      onPressed: () async {
+        // 네비게이션 & 추가 페이지에서 반환하는 알람 객체 받아오기
+        final _result = await Navigator.of(context).push(
+          CupertinoPageRoute(
+            builder: (context) => const AddPage(),
+          ),
+        );
+
+        setState(() {
+          // 알람 저장인 경우
+          if (_result['type'] == 'save') {
+            // 상태에 알람 객체 추가
+            _localData.alarmListState.add(_result['alarm']);
+          }
+        });
+      },
+      child: const Icon(CupertinoIcons.add),
+    );
+  }
+
+  // 알람 객체 삭제 버튼 객체를 반환하는 함수
+  _getRemoveButton({required Alarm alarm}) {
+    return CupertinoButton(
+      padding: const EdgeInsets.all(0),
+      child: Stack(
+        children: const [
+          Icon(
+            CupertinoIcons.minus,
+            color: CupertinoColors.white,
+            size: 30,
+          ),
+          Icon(
+            CupertinoIcons.minus_circle_fill,
+            color: CupertinoColors.systemRed,
+            size: 30,
+          ),
+        ],
+      ),
+      onPressed: () {
+        setState(() {
+          _localData.remove(alarm: alarm);
+        });
+      },
+    );
+  }
+
+  // 알람 객체 활성화 switch 객체를 반환하는 함수
+  _getActivatedSwitch({required bool activated, required int index}) {
+    return CupertinoSwitch(
+      value: activated,
+      onChanged: (value) {
+        setState(() {
+          _localData.onChangedActivated(
+            activated: value,
+            index: index,
+          );
+        });
+      },
+    );
+  }
+
+  // 알람 리스트 뷰 내 아이템 onTap 핸들러
+  _onTapItem({required Alarm alarm}) async {
+    // 탭한 알람 객체와 함께 네비게이션 & 편집 페이지에서 반환하는 알람 객체 받아오기
+    final _result = await Navigator.of(context).push(
+      CupertinoPageRoute(
+        builder: (context) => EditPage(alarm: alarm),
+      ),
+    );
 
     setState(() {
-      for (var i = 0; i < _alarmListLocal.length; i++) {
-        var _alarm = jsonDecode(_alarmListLocal[i]);
-        _alarmListState.add(_alarm);
+      // 알람 수정인 경우
+      if (_result['type'] == 'edit') {
+        // 상태에서 기존 알람 객체 삭제
+        _localData.alarmListState.remove(alarm);
+        // 상태에 변경 알람 객체 추가
+        _localData.alarmListState.add(_result['alarm']);
+      }
+      // 알람 삭제인 경우
+      if (_result['type'] == 'remove') {
+        // 상태에서 해당 알람 객체 삭제
+        _localData.alarmListState.remove(_result['alarm']);
       }
     });
   }
 
-  // CupertinoSwitch onChanged 핸들러
-  _onChangedSwitch(value, index) async {
-    setState(() {
-      _alarmListState[index]['activated'] = "$value";
-
-      var _alarmTitle = _alarmListState[index]['title'];
-      var _timeList = _alarmListState[index]['timeList'];
-      var _activated = value;
-
-      _alarmListLocal[index] =
-          '{"title": "$_alarmTitle", "timeList": "$_timeList", "activated": "$_activated"}';
-    });
-
-    SharedPreferences _prefs = await SharedPreferences.getInstance();
-    _prefs.setStringList('alarmList', _alarmListLocal);
-  }
-
-  // 알람 삭제 버튼 onPressed 핸들러
-  _onPressedDelete(index) async {
-    SharedPreferences _prefs = await SharedPreferences.getInstance();
-
-    setState(() {
-      // 상태로 저장된 알람 목록
-      _alarmListState.remove(_alarmListState[index]);
-
-      // 로컬 저장소에 저장된 알람 목록
-      _alarmListLocal.remove(_alarmListLocal[index]);
-
-      // 로컬 저장소에 저장된 제목 목록
-      _alarmTitleLocal.remove(_alarmTitleLocal[index]);
-    });
-
-    _prefs.setStringList('alarmList', _alarmListLocal);
-    _prefs.setStringList('alarmTitleList', _alarmTitleLocal);
+  // 알람 리스트 뷰
+  _getListView(Size _size) {
+    return ListView.separated(
+      itemBuilder: (context, index) {
+        Alarm _alarm = _localData.alarmListState[index];
+        return _localData.alarmListState.isNotEmpty
+            ? GestureDetector(
+                child: Container(
+                  height: _size.height * 0.1,
+                  padding: const EdgeInsets.all(10),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(_alarm.title.toString()),
+                      _editable
+                          ? _getRemoveButton(alarm: _alarm)
+                          : _getActivatedSwitch(
+                              activated: _alarm.activated, index: index)
+                    ],
+                  ),
+                ),
+                onTap: () => _onTapItem(alarm: _alarm),
+              )
+            : const Text('');
+      },
+      separatorBuilder: (context, index) => const Divider(
+        color: CupertinoColors.systemFill,
+        thickness: 2,
+      ),
+      itemCount: _localData.alarmListState.length,
+      scrollDirection: Axis.vertical,
+      shrinkWrap: true,
+      padding: const EdgeInsets.all(20),
+    );
   }
 
   @override
   void initState() {
     super.initState();
-    _loadAlarmList();
+    // 로컬 저장소 객체 초기화
+    _localData = LocalData();
+    _localData.init();
   }
 
   @override
@@ -90,110 +176,18 @@ class _MainPageState extends State<MainPage> {
 
     return CupertinoPageScaffold(
       navigationBar: CupertinoNavigationBar(
-        leading: CupertinoButton(
-          padding: const EdgeInsets.all(0),
-          child: _editable ? const Text('완료') : const Text('편집'),
-          onPressed: () {
-            setState(() {
-              _editable = !_editable;
-            });
-          },
-        ),
+        leading: _getLeadingButton(),
         middle: const Text('알람'),
-        trailing: CupertinoButton(
-          padding: const EdgeInsets.all(0),
-          onPressed: () async {
-            final _alarm = await Navigator.of(context).pushNamed('/add');
-            setState(() {
-              if (_alarm != null) {
-                _alarmListState.add(jsonDecode(_alarm.toString()));
-                _alarmListLocal.add(_alarm.toString());
-              }
-            });
-          },
-          child: const Icon(CupertinoIcons.add),
-        ),
+        trailing: _getTrailingButton(),
       ),
       child: SafeArea(
-        child: Column(children: [
-          Expanded(
-            child: ListView.separated(
-              scrollDirection: Axis.vertical,
-              shrinkWrap: true,
-              itemBuilder: (context, index) {
-                Map<String, dynamic> _alarm = _alarmListState[index];
-                String _title = _alarm['title'];
-                bool _activated = _alarm['activated'] == 'true';
-                return _alarmListState.isNotEmpty
-                    ? GestureDetector(
-                        child: Container(
-                          height: _size.height * 0.1,
-                          padding: const EdgeInsets.all(10),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(_title),
-                              _editable
-                                  ? CupertinoButton(
-                                      padding: const EdgeInsets.all(0),
-                                      child: Stack(
-                                        children: const [
-                                          Icon(
-                                            CupertinoIcons.minus,
-                                            color: CupertinoColors.white,
-                                            size: 30,
-                                          ),
-                                          Icon(
-                                            CupertinoIcons.minus_circle_fill,
-                                            color: CupertinoColors.systemRed,
-                                            size: 30,
-                                          ),
-                                        ],
-                                      ),
-                                      onPressed: () {
-                                        _onPressedDelete(index);
-                                      },
-                                    )
-                                  : CupertinoSwitch(
-                                      value: _activated,
-                                      onChanged: (value) {
-                                        _onChangedSwitch(value, index);
-                                      },
-                                    ),
-                            ],
-                          ),
-                        ),
-                        onTap: () async {
-                          final _result = await Navigator.of(context).push(
-                            CupertinoPageRoute(
-                              builder: (context) => EditPage(alarm: _alarm),
-                            ),
-                          );
-                          setState(() {
-                            if (_result['type'] == 'delete' &&
-                                _result['alarm'] != null) {
-                              _alarmListState.remove(_result['alarm']);
-                            }
-
-                            if (_result['type'] == 'edit' &&
-                                _result['alarm'] != null) {
-                              _alarmListState.remove(_alarm);
-                              _alarmListState.add(jsonDecode(_result['alarm']));
-                            }
-                          });
-                        },
-                      )
-                    : const Text('알람을 추가해주세요');
-              },
-              itemCount: _alarmListState.length,
-              padding: const EdgeInsets.all(20),
-              separatorBuilder: (context, index) => const Divider(
-                color: CupertinoColors.systemFill,
-                thickness: 2,
-              ),
+        child: Column(
+          children: [
+            Expanded(
+              child: _getListView(_size),
             ),
-          ),
-        ]),
+          ],
+        ),
       ),
     );
   }
