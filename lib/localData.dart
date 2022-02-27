@@ -35,39 +35,11 @@ class LocalData {
     }
   }
 
-  // 경고 문구
-  _showCupertinoDialog(
-      {required String message, required BuildContext context}) {
-    // 경고 문구
-    showCupertinoDialog(
-      context: context,
-      builder: (context) {
-        return CupertinoAlertDialog(
-          title: Text(message),
-          actions: [
-            CupertinoDialogAction(
-              isDefaultAction: true,
-              child: const Text('확인'),
-              onPressed: () {
-                Navigator.pop(context);
-              },
-            ),
-          ],
-        );
-      },
-    );
-  }
-
   // 알람 저장
   save({
     required Alarm alarm,
     required BuildContext context,
   }) {
-    if (alarm.title.toString().isEmpty) {
-      _showCupertinoDialog(message: '알람 이름을 입력해주세요.', context: context);
-    } else if (titleList.contains(alarm.title)) {
-      _showCupertinoDialog(message: '중복된 알람 이름입니다.', context: context);
-    } else {
       // 알람 객체 갱신
       alarmList.add(alarm.toString());
       alarmListState.add(alarm);
@@ -75,7 +47,6 @@ class LocalData {
       // 로컬 저장소 갱신
       prefs.setStringList('alarmList', alarmList);
       prefs.setStringList('titleList', titleList);
-    }
   }
 
   // 알람 편집
@@ -86,12 +57,6 @@ class LocalData {
     required Alarm nextAlarm,
     required BuildContext context,
   }) {
-    if (nextAlarm.title.toString().isEmpty) {
-      _showCupertinoDialog(message: '알람 이름을 입력해주세요.', context: context);
-    } else if (previousAlarm.title != nextAlarm.title &&
-        titleList.contains(nextAlarm.title)) {
-      _showCupertinoDialog(message: '중복된 알람 이름입니다.', context: context);
-    } else {
       // 기존 알람 객체 삭제
       alarmList.remove(previousAlarm.toString());
       alarmListState.remove(previousAlarm);
@@ -103,7 +68,6 @@ class LocalData {
       // 로컬 저장소 갱신
       prefs.setStringList('alarmList', alarmList);
       prefs.setStringList('titleList', titleList);
-    }
   }
 
   // 알람 삭제

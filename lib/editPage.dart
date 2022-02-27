@@ -33,6 +33,9 @@ class _EditPageState extends State<EditPage> {
   // CupertinoDatePicker가 나타내는 시간
   DateTime _pickedTime = DateTime.now();
 
+  // 저장 버튼 비활성화 정보
+  bool _disabled = false;
+
   // 중간 삽입 padding 객체를 반환하는 함수
   _getPadding() {
     return const Padding(
@@ -76,9 +79,18 @@ class _EditPageState extends State<EditPage> {
 
   // 네비게이션 바 내 trailing 버튼 객체를 반환하는 함수
   _getTrailingButton() {
+    // 버튼 비활성화 정보 갱신
+    setState(() {
+      if (_newTimeList.isEmpty || _newTextEditingController.text.isEmpty) {
+        _disabled = true;
+      } else {
+        _disabled = false;
+      }
+    });
+    // 버튼 반환
     return CupertinoButton(
       padding: const EdgeInsets.all(0),
-      onPressed: _onPressedSave,
+      onPressed: _disabled ? null : _onPressedSave,
       child: const Text('저장'),
     );
   }
@@ -133,6 +145,17 @@ class _EditPageState extends State<EditPage> {
       controller: _newTextEditingController,
       keyboardType: TextInputType.text,
       padding: const EdgeInsets.all(9),
+      onChanged: (value) {
+        setState(
+          () {
+            if (value.isEmpty) {
+              _disabled = true;
+            } else {
+              _disabled = false;
+            }
+          },
+        );
+      },
     );
   }
 
