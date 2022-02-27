@@ -1,7 +1,7 @@
 import 'package:flutter/cupertino.dart';
 
 class EditPage extends StatefulWidget {
-  const EditPage({Key? key}) : super(key: key);
+  const EditPage({Key? key, Map<String, dynamic>? alarm}) : super(key: key);
 
   @override
   _EditPageState createState() => _EditPageState();

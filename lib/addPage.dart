@@ -92,14 +92,13 @@ class _AddPageState extends State<AddPage> {
 
     if (_alarmTitleList.length >= 10) {
       _showCupertinoDialog('그룹 알람은 10개까지 생성 가능합니다.');
-    } else
-      if (_alarmTitleList.contains(_alarmTitle)) {
+    } else if (_alarmTitleList.contains(_alarmTitle)) {
       _showCupertinoDialog('중복된 이름입니다.');
     } else if (_alarmTitle.isEmpty) {
       _showCupertinoDialog('알람 이름을 입력해주세요.');
     } else {
       var _alarm =
-          '{title: $_alarmTitle, timeList: $_timeList, activated: true}';
+          '{"title": "$_alarmTitle", "timeList": "$_timeList", "activated": "true"}';
 
       // 로컬 저장소에 알람 목록에 현재 알람 추가
       await _prefs.setStringList('alarmList', [..._alarmList, _alarm]);
@@ -107,7 +106,7 @@ class _AddPageState extends State<AddPage> {
       // 로컬 저장소에 알람 제목 목록에 현재 알람 제목 추가
       await _prefs
           .setStringList('alarmTitleList', [..._alarmTitleList, _alarmTitle]);
-      Navigator.of(context).pop();
+      Navigator.of(context).pop(_alarm);
     }
   }
 
