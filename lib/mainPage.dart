@@ -131,22 +131,35 @@ class _MainPageState extends State<MainPage> {
       itemBuilder: (context, index) {
         Alarm _alarm = _localData.alarmListState[index];
         return _localData.alarmListState.isNotEmpty
-            ? GestureDetector(
-                child: Container(
-                  height: _size.height * 0.1,
-                  padding: const EdgeInsets.all(10),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(_alarm.title.toString()),
-                      _editable
-                          ? _getRemoveButton(alarm: _alarm)
-                          : _getActivatedSwitch(
-                              activated: _alarm.activated, index: index)
-                    ],
-                  ),
+            ? SizedBox(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    GestureDetector(
+                      child: SizedBox(
+                        child: Text(
+                          _alarm.title.toString(),
+                          style: TextStyle(
+                            fontSize: 19,
+                            fontWeight: FontWeight.w600,
+                            color: _alarm.activated
+                                ? CupertinoColors.white
+                                : CupertinoColors.inactiveGray,
+                          ),
+                        ),
+                        width: _size.width * 0.7,
+                      ),
+                      onTap: () => _onTapItem(alarm: _alarm),
+                    ),
+                    _editable
+                        ? _getRemoveButton(alarm: _alarm)
+                        : _getActivatedSwitch(
+                            activated: _alarm.activated,
+                            index: index,
+                          ),
+                  ],
                 ),
-                onTap: () => _onTapItem(alarm: _alarm),
+                height: _size.height * 0.1,
               )
             : const Text('');
       },
