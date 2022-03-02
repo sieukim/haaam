@@ -112,10 +112,10 @@ class _MainPageState extends State<MainPage> {
     setState(() {
       // 알람 수정인 경우
       if (_result['type'] == 'edit') {
-        // 상태에서 기존 알람 객체 삭제
-        _localData.alarmListState.remove(alarm);
-        // 상태에 변경 알람 객체 추가
-        _localData.alarmListState.add(_result['alarm']);
+        // 상태에서 기존 알람 객체 위치
+        int index = _localData.alarmListState.indexOf(alarm);
+        // 상태에 변경 알람 객체 갱신
+        _localData.alarmListState[index] = _result['alarm'];
       }
       // 알람 삭제인 경우
       if (_result['type'] == 'remove') {
